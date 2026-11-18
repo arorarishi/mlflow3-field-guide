@@ -33,7 +33,7 @@ retrieval, tools and post-processing.
 ## Run it
 
 ```bash
-./demo.sh ollama &                     # WSL: starts Windows Ollama on the WSL gateway
+./book.sh ollama &                     # WSL: starts Windows Ollama on the WSL gateway
 LLM_PROVIDER=ollama ./book.sh run 17
 ```
 

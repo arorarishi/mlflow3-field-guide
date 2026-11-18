@@ -268,9 +268,10 @@ def build() -> Path:
                                f"{inline(learn.replace('**You will learn:**', '').strip())}</font>", S["toc"]))
     story.append(PageBreak())
 
-    # Introduction: the book README, minus its contents tables (already above)
-    intro = (BOOK / "README.md").read_text()
+    # Introduction: the repository README, minus its contents tables (already above)
+    intro = (BOOK.parent / "README.md").read_text()
     intro = re.sub(r"## Contents.*?(?=## Suggested paths)", "", intro, flags=re.S)
+    intro = re.sub(r"\]\((?:\.\./)?book/", "](", intro)
     story += markdown(intro, width)
 
     # Chapters, each followed by its example code

@@ -5,6 +5,8 @@
 #   ./book.sh list                              chapters and their titles
 #   ./book.sh run <NN> [<NN> ...]               run chapters, e.g. ./book.sh run 02 10
 #   ./book.sh all                               run every chapter, print a summary
+#   ./book.sh tour                              the 10-minute demo path (see WALKTHROUGH.md)
+#   ./book.sh ollama                            WSL only: start Windows Ollama on the WSL gateway
 #   ./book.sh reset                             delete the book's runs, models and traces
 #   ./book.sh pdf                               build book/MLflow-Book.pdf
 #   ./book.sh docker-up | docker-down           Postgres + MLflow in Docker (port 5050)
@@ -35,7 +37,7 @@ else
 fi
 export PATH="$BIN_DIR:$PATH"
 
-# Under WSL, Ollama on Windows is reachable at the default gateway (see ./demo.sh ollama).
+# Under WSL, Ollama on Windows is reachable at the default gateway (see ./book.sh ollama).
 if [ -z "${OLLAMA_BASE_URL:-}" ]; then
   if grep -qi microsoft /proc/version 2> /dev/null; then
     export OLLAMA_BASE_URL="http://$(ip route | awk '/default/{print $3; exit}'):11434/v1"
@@ -49,6 +51,9 @@ if command -v docker > /dev/null && docker version > /dev/null 2>&1; then
 else
   DOCKER='/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe'
 fi
+
+# The demo path from WALKTHROUGH.md: tune, register, gate, serve, trace, prompts, evaluate.
+TOUR=(13 10 15 12 16 18 19)
 
 server_up() { curl -sf -m 2 -o /dev/null "http://127.0.0.1:$BOOK_PORT/health"; }
 
@@ -111,12 +116,17 @@ case "${1:-}" in
     for chapter in "$@"; do run_chapter "$chapter" || status=$?; done
     exit "$status"
     ;;
-  all)
+  all | tour)
     require_server
     mkdir -p logs
     passed=() failed=()
-    for dir in book/[0-9][0-9]-*/; do
-      n=$(basename "$dir" | cut -c1-2)
+    if [ "$1" = tour ]; then
+      chapters=("${TOUR[@]}")
+    else
+      chapters=()
+      for dir in book/[0-9][0-9]-*/; do chapters+=("$(basename "$dir" | cut -c1-2)"); done
+    fi
+    for n in "${chapters[@]}"; do
       if run_chapter "$n" 2>&1 | tee "logs/chapter-$n.log"; [ "${PIPESTATUS[0]}" -eq 0 ]; then
         passed+=("$n")
       else
@@ -127,6 +137,12 @@ case "${1:-}" in
     echo "Passed: ${#passed[@]}  ${passed[*]}"
     echo "Failed: ${#failed[@]}  ${failed[*]:-}"
     [ ${#failed[@]} -eq 0 ]
+    ;;
+  ollama)
+    # Binds to the WSL adapter only, for this process only. No Windows setting is changed.
+    gateway=$(ip route | awk '/default/{print $3; exit}')
+    OLLAMA_HOST="$gateway:11434" WSLENV=OLLAMA_HOST \
+      exec /mnt/c/Users/*/AppData/Local/Programs/Ollama/ollama.exe serve
     ;;
   pdf)
     "$PYTHON" book/build_pdf.py
@@ -148,7 +164,7 @@ case "${1:-}" in
     "$DOCKER" compose --profile book run --rm --build book run "$@"
     ;;
   *)
-    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

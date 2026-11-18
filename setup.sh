@@ -50,7 +50,7 @@ else
 fi
 
 verify
-chmod +x book.sh demo.sh start.sh stop.sh 2> /dev/null || true
+chmod +x book.sh 2> /dev/null || true
 [ -f .env ] || echo "  NOTE  no .env: the book uses the offline 'fake' LLM. See .env.example."
 
 cat <<'MSG'

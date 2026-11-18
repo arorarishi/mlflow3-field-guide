@@ -1,6 +1,9 @@
-# MLflow demo walkthrough
+# 10-minute MLflow demo walkthrough
 
-Built and run on MLflow 3.18.0. All numbers below come from real runs of this demo.
+This is a guided path through seven book chapters. It covers tuning, registry, promotion
+gate, serving, tracing, prompts and evaluation. Every step is a chapter you can read in
+depth later. The numbers below come from real runs on MLflow 3.18.0 with the default
+offline `fake` LLM.
 
 ## The 30-second version
 
@@ -11,206 +14,222 @@ Built and run on MLflow 3.18.0. All numbers below come from real runs of this de
 
 ## How the pieces fit
 
-| Concept | What it is | Where it appears here |
+| Concept | What it is | Where it appears |
 |---|---|---|
-| Experiment | A named group of related runs | `01-tumor-classifier`, `02-support-bot` |
-| Run | One execution: params, metrics, artifacts | Each candidate in the sweep |
-| LoggedModel | First-class model entity in MLflow 3, with its own metrics | `models:/m-...` |
-| Flavor / pyfunc | Framework-specific format plus a universal `predict()` interface | `mlflow.sklearn.log_model` |
-| Signature | Input and output schema, enforced at serving | HTTP 400 in step 3 |
-| Registered model | Named model with numbered versions | `tumor-classifier` v1, v2 |
+| Experiment | A named group of related runs | `book-13-tuning`, `book-19-genai-eval` |
+| Run | One execution: params, metrics, artifacts | Each Optuna trial (ch 13) |
+| LoggedModel | First-class model entity in MLflow 3, with its own metrics | `models:/m-...` (ch 09, 13) |
+| Flavor / pyfunc | Framework-specific format plus a universal `predict()` interface | ch 07, 12 |
+| Signature | Input and output schema, enforced at serving | HTTP 400 in step 4 |
+| Registered model | Named model with numbered versions | `book-diabetes-regressor` (ch 10) |
 | Alias | A movable pointer to a version | `@champion`, `@challenger` |
-| Trace / span | Tree of steps for one request, with inputs, outputs, timing and tokens | Experiment `02-support-bot` |
-| Prompt registry | Immutable prompt versions with aliases | `prompts:/support-answer@production` |
-| Scorer / judge | Quality check written in code, or run by an LLM | `has_expected_answer` |
+| Trace / span | Tree of steps for one request, with inputs, outputs, timing and tokens | ch 16, 17 |
+| Prompt registry | Immutable prompt versions with aliases | `prompts:/book-support-answer@production` |
+| Scorer / judge | Quality check written in code, or run by an LLM | `has_expected_answer` (ch 19) |
 
-Storage has two halves, and interviewers often ask about this:
+Storage has two halves, and interviewers often ask about this (chapter 01):
 
 - The **backend store** is a SQL database that holds metadata: runs, params, metrics, registry.
 - The **artifact store** is blob storage that holds files: models, plots.
 - With `--serve-artifacts` (the default), the server proxies artifact traffic, so clients need
   no storage credentials.
 
-## Before the interview
-
-From `/root/MLFlow`:
+## Before you present
 
 ```bash
-./start.sh          # starts Docker Desktop, Ollama and MLflow in the background
-./demo.sh all       # only if you want fresh data (about 2 minutes)
-./stop.sh           # when you finish. Stops all three and keeps the demo data
+./book.sh start      # http://localhost:5100
+./book.sh tour       # runs chapters 13 10 15 12 16 18 19 (about 2 minutes)
 ```
 
-Logs go to the `logs/` folder.
+Open http://localhost:5100 and click through every screen once before you present. For a
+clean slate, run `./book.sh stop && ./book.sh reset && ./book.sh start`, then run the tour
+again.
 
-Open http://localhost:5000 in your Windows browser. Click through every screen once, because
-the UI labels below are written from the data model and were not checked against a browser.
+## The demo (about 10 minutes)
 
-For a completely clean slate, run `./stop.sh`, then `./demo.sh reset`, then `./start.sh`.
+### 1. Tracking: "Every experiment is recorded" ([ch 13](book/13-hyperparameter-tuning/))
 
-## The demo script (about 10 minutes)
+Open experiment `book-13-tuning` and expand the `optuna-gbr` parent run.
 
-### 1. Tracking: "Every experiment is recorded"
+> "I ran 20 Optuna trials of a gradient-boosting regressor as nested runs under one parent.
+> Each trial records its params and cross-validated RMSE, so I can compare them all."
 
-Run `.venv/bin/python 01_train_and_track.py`, or show the existing data. Open experiment
-`01-tumor-classifier` and expand the `model-sweep` parent run.
+Sort the child runs by `cv_rmse`. The best trial used `max_depth=1` and a learning rate of about
+0.08. It reached a CV RMSE of 56.83 and a test RMSE of 51.99. The top five trials all used
+depth 1.
 
-> "I ran six candidates as nested runs under one sweep. Each records its params, metrics, the
-> exact dataset, a confusion matrix and the packaged model. Let me compare them."
+> "Shallow trees won. That is exactly why you track every trial instead of assuming that
+> deeper models win."
 
-Select the child runs and compare them. Results on the validation set:
+Point at `start_run(nested=True)` in `example.py` and at the LoggedModel the parent run
+produced.
 
-| Candidate | F1 | ROC AUC |
+### 2. Registry: "Releases are pointers" ([ch 10](book/10-model-registry/))
+
+Open Models, then `book-diabetes-regressor`.
+
+> "Two candidates were registered as versions: a ridge model with R² 0.419 and a forest
+> with 0.469. `@champion` points to the forest and `@challenger` points to the ridge.
+> Consumers load `models:/book-diabetes-regressor@champion`, so a release or a rollback
+> moves a pointer and needs no code change."
+
+The chapter shows a rollback (move `@champion` back and forth), a registry search, and a copy
+of the champion into `book-diabetes-regressor-prod`. That copy is how you promote across
+environments.
+
+> "Stages like Staging and Production are deprecated in favor of aliases."
+
+### 3. Promotion gate: "Promotion is a gated decision" ([ch 15](book/15-ci-promotion-gate/))
+
+Open the registered model `book-gated-classifier`. On a fresh server, the gate sees three
+candidates:
+
+| Candidate | Test F1 | Gate result |
 |---|---|---|
-| logreg C=0.001 | 0.893 | 0.989 |
-| logreg C=0.1 | 0.979 | 0.997 |
-| **logreg C=1.0** | **0.993** | **0.998** |
-| forest 10 trees, depth 2 | 0.951 | 0.975 |
-| forest 100 trees, depth 4 | 0.965 | 0.982 |
-| forest 300 trees, no depth limit | 0.965 | 0.980 |
+| dummy (always predicts the majority class) | 0.774 | fails the absolute bar of 0.9 |
+| logreg C=1.0 | 0.986 | passes and becomes `@champion` |
+| logreg C=0.001 | 0.917 | passes the bar but does not beat the champion |
 
-> "The simple scaled logistic regression beat the random forests, and that is exactly why you
-> track baselines instead of assuming the complex model wins."
+> "`gate.py` exits non-zero when a candidate fails, so CI can act on the result. The
+> chapter includes a GitHub Actions workflow that does this."
 
-Point at this code in `01_train_and_track.py`: `start_run(nested=True)`, `log_input`,
-`infer_signature`, and `log_metrics(..., model_id=info.model_id)`.
+If you run the tour again, the strong model only ties the champion and is not promoted.
+That shows the gate is real.
 
-### 2. Registry: "Promotion is a gated decision"
+### 4. Serving: "Any model, same REST contract" ([ch 12](book/12-serving-deployment/))
 
-Open Models, then `tumor-classifier`.
+The chapter starts `mlflow models serve` on port 5101 for
+`models:/book-serving-classifier@champion` and calls it three ways:
 
-> "The data was split three ways. Train fits, validation chooses, and test is only for the
-> promotion gate. I seeded a weak v1 as the incumbent. The best candidate became v2 with
-> `@challenger`, scored 0.986 test F1 against 0.917, and so the script moved `@champion`."
-
-> "Stages like Staging and Production are deprecated in favor of aliases. Consumers load
-> `models:/tumor-classifier@champion`, so a release or rollback moves a pointer and needs no
-> application code change."
-
-If you run step 2 again, the new version ties the champion and is not promoted. That shows
-the gate is real.
-
-### 3. Serving: "Any model, same REST contract"
-
-```bash
-./demo.sh serve    # new terminal, wait for startup
-./demo.sh score
 ```
-
-Expected output: HTTP 200 with `{"predictions": [0, 1, 0]}`, matching the true labels, and then
-HTTP 400 for a request with a missing column.
+POST /invocations (dataframe_split)  -> 200 {"predictions": [1, 0, 0]}   true labels: [1, 0, 0]
+POST /invocations (missing column)   -> 400 INVALID_PARAMETER_VALUE
+```
 
 > "The serving layer does not care that this is scikit-learn, because it goes through pyfunc.
 > The signature I logged at training time rejects a bad payload before it reaches the model."
 
-### 4. Tracing: "See inside an LLM request"
+The chapter also does batch scoring with `mlflow models predict` and generates a Dockerfile
+with `mlflow models generate-dockerfile`.
 
-Open experiment `02-support-bot`, then Traces. Open a trace from `04_trace_rag_app.py`:
+### 5. Tracing: "See inside a request" ([ch 16](book/16-tracing-fundamentals/), [ch 17](book/17-tracing-llm-autolog/))
+
+Open experiment `book-16-tracing`, then Traces, and open the trace with status ERROR:
 
 ```
-request            CHAIN
-  support_bot      AGENT
-    retrieve       RETRIEVER
-      Embeddings   EMBEDDING
-    Completions    CHAT_MODEL
+order_status_bot   AGENT    ERROR
+  extract_order_id   PARSER   OK
+  policy_check       CHAIN    OK
+  lookup_order       TOOL     ERROR
 ```
 
-> "`mlflow.openai.autolog()` captures the LLM and embedding calls with one line. The
-> `@mlflow.trace` decorators add my own steps. For a bad answer, I can see whether retrieval
-> returned the wrong documents or the model ignored good ones. Those need different fixes."
+> "`@mlflow.trace` turns my own functions into spans. Failures are still logged, and the
+> exception is attached to the span that raised it. The `api_key` input is masked before
+> it is stored."
 
-Show the retrieved documents, token counts and latency. Filter by the session tag.
+Filter by `trace.status = 'ERROR'` or by user. With a real LLM, chapter 17 adds
+`mlflow.openai.autolog()`, which captures the chat and embedding calls in one line:
+`LLM_PROVIDER=ollama ./book.sh run 17`.
 
-### 5. Prompts and evaluation: "Prompt changes need evidence"
+### 6. Prompts and evaluation: "Prompt changes need evidence" ([ch 18](book/18-prompt-registry/), [ch 19](book/19-genai-evaluation/))
 
-Open the Prompts page, `support-answer`, and diff the versions. Then open the two evaluation runs.
+Open the Prompts page, then `book-support-answer`, and compare the versions. Then open
+experiment `book-19-genai-eval` and the two evaluation runs.
 
-| Prompt | Has expected answer | Concise |
-|---|---|---|
-| v1, loose | 78% | 89% |
-| v2, grounded | 100% | 100% |
+| Prompt | Has expected answer | No markdown | Length OK |
+|---|---|---|---|
+| v1, loose | 75% | 100% | 100% |
+| v2, grounded | 100% | 100% | 100% |
 
-> "A prompt is a deployable artifact, so it gets versions and an alias like a model. I ran both
-> versions over the same evaluation set. v2 won, so `@production` moved to it. The app loads
-> the alias, so a prompt release needs no code deployment."
+> "A prompt is a deployable artifact, so it gets versions and an alias like a model does. I ran
+> both versions over the same 8-case dataset stored in MLflow. v2 won, so `@production`
+> moved to it. The app loads the alias, so a prompt release needs no code deployment."
 
-Open a failing v1 row to show answer-level detail. Say the limitation out loud: nine cases is a
-demo, and I wrote v2 knowing what the test cases were.
+Open a failing v1 row to show detail for that answer. Be upfront about the limitation:
+eight cases make a demo, not a benchmark. With `LLM_PROVIDER=ollama`, chapter 19 also adds
+LLM judges.
 
-### 6. Production shape: "This is how I would host it"
+### 7. Production shape: "This is how I would host it" ([ch 23](book/23-tracking-server-docker/), [ch 24](book/24-authentication/))
 
 ```bash
-./demo.sh stack-up      # http://127.0.0.1:5050, then ./demo.sh stack-down
+./book.sh docker-up          # http://127.0.0.1:5050, then ./book.sh docker-down
+./book.sh docker-run 02      # run any chapter against it
 ```
 
 > "Locally I used SQLite. For a team, that becomes Postgres for concurrent writes, object
-> storage for artifacts, and authentication in front. This Compose file shows the first step."
+> storage for artifacts, and authentication in front. This Compose file is the first step.
+> Chapter 24 adds basic-auth with users and permissions."
 
 ## Questions you are likely to get
 
 **Why use aliases instead of stages?** Stages were a fixed list, and a version could only be in
-one. Aliases are arbitrary named pointers, a version can have several, and tags carry extra state.
+one stage at a time. Aliases are arbitrary named pointers, and a version can have several.
+Tags carry any extra state.
 
 **What makes a run reproducible?** Code version, params, data reference, environment and seed.
-MLflow records the git commit when run from a repo, logs pinned requirements with the model,
-and tracks dataset metadata. It does not snapshot your data, so the source must be immutable or
-versioned.
+MLflow records the git commit when you run from a repo, logs pinned requirements with the
+model, and tracks dataset metadata (ch 04). It does not snapshot your data, so the source must
+be immutable or versioned.
 
 **After moving an alias, does the running server change?** Not automatically.
 `mlflow models serve` resolves the alias when it starts and loads that model. You restart or
 roll the deployment. The alias is the source of truth, and your deployment system acts on it.
 
 **How would you deploy this at scale?** `mlflow models build-docker` makes an image for
-Kubernetes or a managed endpoint. There is also a SageMaker integration. CI promotes the alias
-after gates pass, then triggers a rolling or canary release.
+Kubernetes or a managed endpoint. There is also a SageMaker integration. CI moves the alias
+after the gates pass (ch 15), then triggers a rolling or canary release.
 
-**How do you secure it?** The server has no authentication by default. Use `--app-name basic-auth`
-at minimum, or preferably SSO through a reverse proxy, plus TLS and private networking.
-`--allowed-hosts` guards against bad Host headers. Unpickling a model can run code, so only load
-models from trusted sources. MLflow 3.18 saves scikit-learn models with skops by default and made
-this demo explicitly trust the tree type, which is why that argument appears in the code.
+**How do you secure it?** The server has no authentication by default. Use
+`--app-name basic-auth` at minimum (ch 24), or preferably SSO through a reverse proxy. Add TLS
+and private networking. `--allowed-hosts` guards against bad Host headers. Unpickling a model
+can run code, so only load models from trusted sources. MLflow 3.18 saves scikit-learn models
+with skops by default, which is why the chapters pass `skops_trusted_types`.
 
-**Autolog or manual logging?** Autolog is great for coverage and speed. Add manual logging for
-business metrics, custom plots and anything specific to the decision you need to make.
+**Autolog or manual logging?** Autolog gives broad coverage quickly (ch 03). Add manual
+logging for business metrics, custom plots and anything specific to the decision you need to
+make.
 
-**What does MLflow not do?** Pipeline orchestration (Airflow, Kubeflow), feature stores (Feast),
-data versioning (DVC, lakeFS), and classic drift monitoring (Evidently, or your observability stack).
+**What does MLflow not do?** Pipeline orchestration (Airflow, Kubeflow), feature stores
+(Feast), data versioning (DVC, lakeFS), and classic drift monitoring (Evidently, or your
+observability stack).
 
 **How does it compare to Weights & Biases?** W&B is a polished SaaS with strong collaboration
-and visualization. MLflow is open source, self-hostable and has a broad model-packaging and
-registry story. Databricks offers a managed MLflow. Compliance and hosting needs usually decide it.
+and visualization features. MLflow is open source and self-hostable, and its model packaging
+and registry are broad. Databricks offers a managed MLflow. Compliance and hosting needs
+usually decide between them.
 
 **How does tracing work in production?** Export is asynchronous, so it adds little request
 latency. Traces are OpenTelemetry-compatible. Use the lightweight `mlflow-tracing` package in
-services, and sample high-volume traffic. Mask sensitive inputs before they are stored.
+services, and sample high-volume traffic. Mask sensitive inputs before they are stored
+(ch 16).
 
-**Code scorers or LLM judges?** Use code for anything checkable, because it is cheap and
-deterministic. Use judges for subjective qualities like groundedness or tone, and validate
-judges against human labels. I tried a judge on `llama3.2:1b` here. It ran, but its reasoning was
-incoherent, so I kept it out of the promotion gate. A judge needs a stronger model.
+**Code scorers or LLM judges?** Use code for anything you can check in code, because it is
+cheap and deterministic. Use judges for subjective qualities like groundedness or tone, and
+validate judges against human labels (ch 20). Small local models make unreliable judges, so
+keep them out of a promotion gate.
 
 **What are the performance limits?** Logging many metrics one at a time is slow, so use
-`log_batch` or asynchronous logging. Set retention rules, since deleted runs are soft-deleted
-until `mlflow gc` removes them.
+`log_batch` or asynchronous logging (ch 06). Set retention rules, because deleted runs are
+soft-deleted until `mlflow gc` removes them (ch 25).
 
 ## Be straight about what this is
 
-Describe it as "a demo I built to get hands-on with MLflow 3", and not as production experience.
-You can say this confidently, because you ran it:
+Describe it as "a project I built to get hands-on with MLflow 3", not as production
+experience. You can say this with confidence, because you ran it:
 
-- The classic flow is real end to end, on a public dataset of 569 rows.
-- Test F1 is used once per promotion here. Repeated gating on the same test set slowly leaks.
-- The v1 seed was deliberately weak, so that there would be something to beat.
-- The evaluation set has 9 cases, with simple substring checks.
-- The Docker stack uses a local volume. The swap to real S3 was not tested here.
-- Not demoed: AI Gateway, built-in judges in the gate, production monitoring, and user auth.
+- Every step runs end to end on public scikit-learn datasets (breast cancer, diabetes).
+- The GenAI steps use a deterministic fake LLM unless you set a real provider.
+- The promotion gate uses test F1. Gating repeatedly on the same test set slowly leaks
+  information from it.
+- The evaluation set has 8 cases, with simple substring checks.
+- The Docker stack uses a local volume. Swapping it for real S3 was not tested here.
 
 ## If something breaks
 
 | Symptom | Fix |
 |---|---|
-| Connection error on the LLM steps | Start `./demo.sh ollama`. Check the Windows firewall if it still fails. |
-| `Connection refused` on port 5000 | Start `./demo.sh server`. |
-| Port 5001 not answering | `./demo.sh serve` takes a few seconds, and needs the server up. |
-| `stack-up` fails | Start Docker Desktop first. |
-| Want a hosted model | Copy `.env.example` to `.env`, set `LLM_PROVIDER` and the key. |
+| `The book server is not running` | `./book.sh start` (log: `logs/book-server.log`) |
+| Connection error with `LLM_PROVIDER=ollama` | Start Ollama. Under WSL, run `./book.sh ollama` and check the Windows firewall. |
+| Port 5101 busy in chapter 12 | A previous model server is still running: `pkill -f "models serve"` |
+| `docker-up` fails | Start Docker first. |
+| You want a hosted model | Copy `.env.example` to `.env`, then set `LLM_PROVIDER` and the key. |

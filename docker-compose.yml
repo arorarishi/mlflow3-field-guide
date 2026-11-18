@@ -2,7 +2,7 @@
 # In a real deployment, --artifacts-destination would point at s3://, gs:// or wasbs://.
 # The port binds to localhost and the credentials are demo-only.
 #
-#   ./demo.sh stack-up  or  ./book.sh docker-up    postgres + mlflow  (http://127.0.0.1:5050)
+#   ./book.sh docker-up                            postgres + mlflow  (http://127.0.0.1:5050)
 #   ./book.sh docker-run 02 10                     run book chapters in a container
 services:
   postgres:
