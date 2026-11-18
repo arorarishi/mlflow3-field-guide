@@ -11,6 +11,7 @@
 #   ./book.sh pdf                               build book/MLflow-Book.pdf
 #   ./book.sh docker-up | docker-down           Postgres + MLflow in Docker (port 5050)
 #   ./book.sh docker-run <NN> [...]             run chapters inside Docker against that stack
+#   ./book.sh docker-tour | docker-all          the tour, or every chapter, inside Docker
 #
 # Environment: LLM_PROVIDER (fake|ollama|openai|deepinfra), MLFLOW_TRACKING_URI, BOOK_PORT.
 set -uo pipefail
@@ -32,10 +33,11 @@ if [ -n "${PYTHON:-}" ]; then
 elif [ -x .venv/bin/python ]; then
   PYTHON=$ROOT/.venv/bin/python
   BIN_DIR=$ROOT/.venv/bin
-else
-  echo "No .venv found. Run ./setup.sh first."; exit 1
+elif [[ "${1:-}" != docker-* ]]; then
+  # The docker-* commands need only Docker: Python runs inside the containers.
+  echo "No .venv found. Run ./setup.sh first, or use Docker: ./book.sh docker-tour"; exit 1
 fi
-export PATH="$BIN_DIR:$PATH"
+[ -n "${BIN_DIR:-}" ] && export PATH="$BIN_DIR:$PATH"
 
 # Under WSL, Ollama on Windows is reachable at the default gateway (see ./book.sh ollama).
 if [ -z "${OLLAMA_BASE_URL:-}" ]; then
@@ -163,8 +165,11 @@ case "${1:-}" in
     [ $# -gt 0 ] || { echo "usage: ./book.sh docker-run <NN> [<NN> ...]"; exit 2; }
     "$DOCKER" compose --profile book run --rm --build book run "$@"
     ;;
+  docker-tour | docker-all)
+    "$DOCKER" compose --profile book run --rm --build book "${1#docker-}"
+    ;;
   *)
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

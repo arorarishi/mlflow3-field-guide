@@ -1,7 +1,9 @@
-.venv/
+.venv*/
 **/__pycache__/
 mlflow.db
 mlartifacts/
 logs/
 book/.data/
 .env
+book/MLflow-Book.pdf
+.git/

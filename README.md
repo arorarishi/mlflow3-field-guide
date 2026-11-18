@@ -10,24 +10,36 @@ The [10-minute walkthrough](WALKTHROUGH.md) is a guided path through seven of th
 
 ## Quick start
 
+You can run the book either locally with Python or entirely in Docker. You need only one of
+the two.
+
+**Option A: local Python.** Needs [uv](https://docs.astral.sh/uv/) (preferred) or Python 3.12.
+No Docker is required.
+
 ```bash
-./setup.sh                 # Python 3.12 venv in .venv (uses uv, or falls back to pip)
-./book.sh start            # tracking server on http://localhost:5100
+./setup.sh                 # Python 3.12 venv in .venv
+./book.sh start            # tracking server (SQLite) on http://localhost:5100
 ./book.sh run 02           # one chapter. Or: ./book.sh run 07 08 09
 ./book.sh tour             # the 10-minute demo path: chapters 13 10 15 12 16 18 19
 ./book.sh all              # every chapter, with a pass/fail summary
 ./book.sh stop
 ```
 
-Requirements: [uv](https://docs.astral.sh/uv/) (preferred) or Python 3.12. Docker and
-Ollama are optional.
+**Option B: Docker only.** Needs only Docker. You do not need to run `setup.sh` or install
+Python.
+
+```bash
+./book.sh docker-tour      # builds the images, starts Postgres + MLflow, runs the tour
+./book.sh docker-run 02    # one chapter. Or: ./book.sh docker-all
+./book.sh docker-down
+```
+
+The Docker stack uses Postgres and serves its UI on http://127.0.0.1:5050 (chapter 23).
+The two options use separate stores, so their runs never mix.
 
 GenAI chapters run **offline** by default, using a deterministic fake LLM. For real model
 calls, set `LLM_PROVIDER=ollama`, or use `openai` or `deepinfra` with a key in `.env` (see
-`.env.example`).
-
-To use Docker instead of a local server, run `./book.sh docker-up`, then
-`./book.sh docker-run 02`. This gives you Postgres plus MLflow on port 5050 (chapter 23).
+`.env.example`). Ollama is optional.
 
 ## Contents
 

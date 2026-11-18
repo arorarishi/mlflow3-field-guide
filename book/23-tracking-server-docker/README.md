@@ -29,7 +29,7 @@ mlflow server --host 0.0.0.0 --port 5000 \
 ```
 postgres:16-alpine  ◀── mlflow (ghcr.io/mlflow/mlflow:v3.18.0 + psycopg)  ──▶ :5050 on localhost
                               ▲
-book (profile "book") ────────┘   MLFLOW_TRACKING_URI=http://mlflow:5000, repo mounted at /work
+book (profile "book") ────────┘   MLFLOW_TRACKING_URI=http://mlflow:5000, repo copied to /work
 ```
 
 ```bash
