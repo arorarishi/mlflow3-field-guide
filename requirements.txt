@@ -1,0 +1,10 @@
+# Python 3.12. Installed into .venv by ./setup.sh
+mlflow[auth]==3.18.0
+scikit-learn>=1.5
+pandas>=2.2
+matplotlib>=3.8
+skops>=0.10
+openai>=1.40
+optuna>=4.0
+psutil>=5.9
+reportlab>=4.0         # ./book.sh pdf

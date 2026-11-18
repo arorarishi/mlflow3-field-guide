@@ -1,0 +1,62 @@
+# Production-shaped topology: Postgres for metadata, and artifacts proxied by the server.
+# In a real deployment, --artifacts-destination would point at s3://, gs:// or wasbs://.
+# The port binds to localhost and the credentials are demo-only.
+#
+#   ./demo.sh stack-up  or  ./book.sh docker-up    postgres + mlflow  (http://127.0.0.1:5050)
+#   ./book.sh docker-run 02 10                     run book chapters in a container
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow_demo
+      POSTGRES_DB: mlflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 3s
+      retries: 20
+
+  mlflow:
+    build: ./docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # The server proxies artifacts, so clients need no storage credentials of their own.
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri postgresql://mlflow:mlflow_demo@postgres:5432/mlflow
+      --artifacts-destination /mlartifacts
+      --allowed-hosts "localhost:*,127.0.0.1:*,mlflow:*"
+    volumes:
+      - artifacts:/mlartifacts
+    ports:
+      - "127.0.0.1:5050:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      retries: 30
+
+  # Book runner. Only started by `--profile book` (./book.sh docker-run).
+  book:
+    profiles: ["book"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.book
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      # Ollama on the Docker host. It must listen on an address containers can reach.
+      OLLAMA_BASE_URL: ${DOCKER_OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPINFRA_API_KEY: ${DEEPINFRA_API_KEY:-}
+    volumes:
+      - .:/work
+
+volumes:
+  pgdata:
+  artifacts:

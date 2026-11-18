@@ -1,0 +1,17 @@
+name: book-diabetes-project
+
+# Which environment `mlflow run` builds before running a command.
+# `--env-manager local` skips this and uses the current interpreter.
+python_env: python_env.yaml
+
+entry_points:
+  main:
+    parameters:
+      alpha: {type: float, default: 1.0}
+      l1_ratio: {type: float, default: 0.5}
+    command: "python train.py --alpha {alpha} --l1-ratio {l1_ratio}"
+
+  report:
+    parameters:
+      run_id: string
+    command: "python report.py --run-id {run_id}"

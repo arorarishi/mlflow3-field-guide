@@ -1,0 +1,12 @@
+# Image for running the book's chapters inside Docker (./book.sh docker-run <NN>).
+# The repository is mounted at /work at run time, so code edits need no rebuild.
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends curl procps \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+ENV PYTHON=python \
+    MLFLOW_DISABLE_AGENT_HINT=1
+WORKDIR /work
+ENTRYPOINT ["./book.sh"]
+CMD ["list"]
