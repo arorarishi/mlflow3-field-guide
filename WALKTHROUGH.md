@@ -37,12 +37,12 @@ Storage has two halves, and interviewers often ask about this (chapter 01):
 ## Before you present
 
 ```bash
-./book.sh start      # http://localhost:5100
+./start.sh           # http://localhost:5100
 ./book.sh tour       # runs chapters 13 10 15 12 16 18 19 (about 2 minutes)
 ```
 
 Open http://localhost:5100 and click through every screen once before you present. For a
-clean slate, run `./book.sh stop && ./book.sh reset && ./book.sh start`, then run the tour
+clean slate, run `./stop.sh && ./book.sh reset && ./start.sh`, then run the tour
 again.
 
 ## The demo (about 10 minutes)
@@ -228,7 +228,7 @@ experience. You can say this with confidence, because you ran it:
 
 | Symptom | Fix |
 |---|---|
-| `The book server is not running` | `./book.sh start` (log: `logs/book-server.log`) |
+| `The book server is not running` | `./start.sh` (log: `logs/book-server.log`) |
 | Connection error with `LLM_PROVIDER=ollama` | Start Ollama. Under WSL, run `./book.sh ollama` and check the Windows firewall. |
 | Port 5101 busy in chapter 12 | A previous model server is still running: `pkill -f "models serve"` |
 | `docker-up` fails | Start Docker first. |

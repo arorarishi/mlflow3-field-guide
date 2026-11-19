@@ -18,24 +18,26 @@ No Docker is required.
 
 ```bash
 ./setup.sh                 # Python 3.12 venv in .venv
-./book.sh start            # tracking server (SQLite) on http://localhost:5100
+./start.sh                 # tracking server (SQLite) on http://localhost:5100
 ./book.sh run 02           # one chapter. Or: ./book.sh run 07 08 09
 ./book.sh tour             # the 10-minute demo path: chapters 13 10 15 12 16 18 19
 ./book.sh all              # every chapter, with a pass/fail summary
-./book.sh stop
+./stop.sh
 ```
 
 **Option B: Docker only.** Needs only Docker. You do not need to run `setup.sh` or install
 Python.
 
 ```bash
-./book.sh docker-tour      # builds the images, starts Postgres + MLflow, runs the tour
+./start.sh docker          # Postgres + MLflow on http://127.0.0.1:5050
+./book.sh docker-tour      # the 10-minute demo path
 ./book.sh docker-run 02    # one chapter. Or: ./book.sh docker-all
-./book.sh docker-down
+./stop.sh
 ```
 
 The Docker stack uses Postgres and serves its UI on http://127.0.0.1:5050 (chapter 23).
-The two options use separate stores, so their runs never mix.
+The two options use separate stores, so their runs never mix. `./stop.sh` stops whichever
+servers are running, including any model server from chapters 12 or 21, and keeps your data.
 
 GenAI chapters run **offline** by default, using a deterministic fake LLM. For real model
 calls, set `LLM_PROVIDER=ollama`, or use `openai` or `deepinfra` with a key in `.env` (see
@@ -106,6 +108,7 @@ The whole book is also available as a PDF: [book/MLflow-Book.pdf](book/MLflow-Bo
 | `book/NN-topic/` | one chapter: `README.md` + `example.py` (+ supporting files) |
 | `book/shared.py` | tracking URI, datasets, LLM provider switch, fake LLM |
 | `book/support_bot.py` | small traced RAG bot used by chapters 19–22 |
+| `start.sh`, `stop.sh` | start the tracking server (local or Docker), stop everything |
 | `book.sh` | server, chapter runner, tour, Docker helpers |
 | `setup.sh`, `requirements.txt` | create or verify the virtualenv |
 | `docker-compose.yml`, `docker/` | Postgres + MLflow server, book runner image |

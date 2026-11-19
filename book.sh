@@ -76,7 +76,7 @@ run_chapter() {
 
 require_server() {
   if [[ "$MLFLOW_TRACKING_URI" == "http://127.0.0.1:$BOOK_PORT" ]] && ! server_up; then
-    echo "The book server is not running. Start it with: ./book.sh start"; exit 1
+    echo "The book server is not running. Start it with: ./start.sh"; exit 1
   fi
 }
 
@@ -101,7 +101,7 @@ case "${1:-}" in
     pkill -f "mlflow server --host 127.0.0.1 --port $BOOK_PORT" && echo "Book server stopped" || echo "Book server was not running"
     ;;
   status)
-    server_up && echo "UP   http://localhost:$BOOK_PORT" || echo "DOWN (./book.sh start)"
+    server_up && echo "UP   http://localhost:$BOOK_PORT" || echo "DOWN (./start.sh)"
     echo "LLM_PROVIDER=$LLM_PROVIDER  OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
     ;;
   list)
