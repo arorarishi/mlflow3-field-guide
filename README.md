@@ -1,4 +1,4 @@
-# MLflow 3 Field Guide
+# Offline to Online: Evaluating and Shipping LLM Apps with MLflow 3
 
 A hands-on course in MLflow 3, from the first logged metric to authenticated servers and
 evaluated agents. It has 25 chapters. Each one has a `README.md` covering concepts, APIs,
@@ -90,7 +90,7 @@ calls, set `LLM_PROVIDER=ollama`, or use `openai` or `deepinfra` with a key in `
 | 24 | [Authentication](book/24-authentication/) | basic-auth, users, permissions |
 | 25 | [Housekeeping](book/25-housekeeping/) | gc, migrations, export |
 
-The whole book is also available as a PDF: [book/MLflow-Book.pdf](book/MLflow-Book.pdf)
+The whole book is also available as a PDF: [book/Offline-to-Online.pdf](book/Offline-to-Online.pdf)
 (rebuild it with `./book.sh pdf`).
 
 ## Suggested paths

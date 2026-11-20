@@ -1,4 +1,4 @@
-"""Build book/MLflow-Book.pdf from the chapter READMEs and example code.
+"""Build book/Offline-to-Online.pdf from the chapter READMEs and example code.
 
     ./book.sh pdf            (or: .venv/bin/python book/build_pdf.py)
 
@@ -34,7 +34,7 @@ from reportlab.platypus import (
 )
 
 BOOK = Path(__file__).resolve().parent
-OUT = BOOK / "MLflow-Book.pdf"
+OUT = BOOK / "Offline-to-Online.pdf"
 PARTS = {
     1: "Part I — Tracking",
     7: "Part II — Models",
@@ -205,7 +205,7 @@ class BookDoc(BaseDocTemplate):
     def __init__(self, path: str):
         super().__init__(path, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm,
                          topMargin=18 * mm, bottomMargin=18 * mm,
-                         title="The MLflow Book", author="MLflow learning repo", subject="MLflow 3.18")
+                         title="Offline to Online: Evaluating and Shipping LLM Apps with MLflow 3", author="MLflow learning repo", subject="MLflow 3.18")
         frame = Frame(self.leftMargin, self.bottomMargin, self.width, self.height, id="f")
         self.addPageTemplates([
             PageTemplate("cover", [frame]),
@@ -217,7 +217,7 @@ class BookDoc(BaseDocTemplate):
         canvas.saveState()
         canvas.setFont(SANS, 7.5)
         canvas.setFillColor(colors.grey)
-        canvas.drawString(doc.leftMargin, 10 * mm, "The MLflow Book")
+        canvas.drawString(doc.leftMargin, 10 * mm, "Offline to Online")
         canvas.drawRightString(A4[0] - doc.rightMargin, 10 * mm, str(doc.page))
         canvas.restoreState()
 
@@ -245,9 +245,10 @@ def build() -> Path:
     story: list = []
 
     # Cover
-    story += [Spacer(1, 70 * mm), Paragraph("The MLflow Book", S["title"]), Spacer(1, 8 * mm),
-              Paragraph("25 hands-on chapters on MLflow 3: tracking, models, registry, serving,<br/>"
-                        "tracing, prompts, GenAI evaluation, agents and operations", S["subtitle"]),
+    story += [Spacer(1, 70 * mm), Paragraph("Offline to Online", S["title"]), Spacer(1, 4 * mm),
+              Paragraph("Evaluating and Shipping LLM Apps with MLflow 3", S["subtitle"]), Spacer(1, 8 * mm),
+              Paragraph("25 hands-on chapters: offline evals, online tracing and feedback, prompts, agents,<br/>"
+                        "plus the tracking, registry, serving and ops that get them to production", S["subtitle"]),
               Spacer(1, 10 * mm),
               Paragraph(f"Written for MLflow 3.18.0 · built {datetime.date.today():%d %B %Y}", S["subtitle"])]
     story.append(PageBreak())

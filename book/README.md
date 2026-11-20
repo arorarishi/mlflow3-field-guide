@@ -1,4 +1,4 @@
-# The MLflow Book
+# Offline to Online: Evaluating and Shipping LLM Apps with MLflow 3
 
 The table of contents, setup and suggested reading paths are in the
 [main README](../README.md#contents).
@@ -14,6 +14,6 @@ Shared code:
 ```
 shared.py        tracking URI, datasets, LLM provider switch, fake LLM
 support_bot.py   small traced RAG bot used by chapters 19–22
-build_pdf.py     builds MLflow-Book.pdf (./book.sh pdf)
+build_pdf.py     builds Offline-to-Online.pdf (./book.sh pdf)
 .data/           the book server's database and artifacts (./book.sh reset deletes it)
 ```

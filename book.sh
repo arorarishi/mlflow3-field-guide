@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runner for the MLflow book.
+# Runner for "Offline to Online", the MLflow 3 book.
 #
 #   ./book.sh start | stop | status | server   the book's tracking server (port 5100)
 #   ./book.sh list                              chapters and their titles
@@ -8,7 +8,7 @@
 #   ./book.sh tour                              the 10-minute demo path (see WALKTHROUGH.md)
 #   ./book.sh ollama                            WSL only: start Windows Ollama on the WSL gateway
 #   ./book.sh reset                             delete the book's runs, models and traces
-#   ./book.sh pdf                               build book/MLflow-Book.pdf
+#   ./book.sh pdf                               build book/Offline-to-Online.pdf
 #   ./book.sh docker-up | docker-down           Postgres + MLflow in Docker (port 5050)
 #   ./book.sh docker-run <NN> [...]             run chapters inside Docker against that stack
 #   ./book.sh docker-tour | docker-all          the tour, or every chapter, inside Docker

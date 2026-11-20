@@ -5,5 +5,5 @@ mlartifacts/
 logs/
 book/.data/
 .env
-book/MLflow-Book.pdf
+book/Offline-to-Online.pdf
 .git/
